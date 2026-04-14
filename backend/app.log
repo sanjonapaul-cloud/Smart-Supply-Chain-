@@ -5,3 +5,24 @@
 2026-04-15 02:17:28,249 - INFO -  * Debugger PIN: 587-775-760
 2026-04-15 02:18:32,564 - INFO - Prediction: High Risk \U0001f6a8 | Input: {'distance': 80, 'delay': 30, 'weather': 2}
 2026-04-15 02:18:32,566 - INFO - 127.0.0.1 - - [15/Apr/2026 02:18:32] "POST /predict HTTP/1.1" 200 -
+2026-04-15 02:20:50,446 - INFO -  * Detected change in 'C:\\Users\\palbi\\OneDrive\\Attachments\\Desktop\\project\\Smart-Supply-Chain-\\backend\\utils\\storage.py', reloading
+2026-04-15 02:20:54,716 - WARNING -  * Debugger is active!
+2026-04-15 02:20:54,724 - INFO -  * Debugger PIN: 587-775-760
+2026-04-15 02:22:32,973 - INFO -  * Detected change in 'C:\\Users\\palbi\\OneDrive\\Attachments\\Desktop\\project\\Smart-Supply-Chain-\\backend\\routes\\predict.py', reloading
+2026-04-15 02:22:36,867 - WARNING -  * Debugger is active!
+2026-04-15 02:22:36,877 - INFO -  * Debugger PIN: 587-775-760
+2026-04-15 02:23:00,684 - INFO - Prediction: High Risk \U0001f6a8 | Input: {'distance': 80, 'delay': 30, 'weather': 2}
+2026-04-15 02:23:00,685 - INFO - 127.0.0.1 - - [15/Apr/2026 02:23:00] "POST /predict HTTP/1.1" 200 -
+2026-04-15 02:24:03,665 - INFO -  * Detected change in 'C:\\Users\\palbi\\OneDrive\\Attachments\\Desktop\\project\\Smart-Supply-Chain-\\backend\\routes\\predict.py', reloading
+2026-04-15 02:24:08,000 - WARNING -  * Debugger is active!
+2026-04-15 02:24:08,005 - INFO -  * Debugger PIN: 587-775-760
+2026-04-15 02:24:09,419 - INFO -  * Detected change in 'C:\\Users\\palbi\\OneDrive\\Attachments\\Desktop\\project\\Smart-Supply-Chain-\\backend\\routes\\predict.py', reloading
+2026-04-15 02:25:05,304 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-04-15 02:25:05,304 - INFO - [33mPress CTRL+C to quit[0m
+2026-04-15 02:25:05,304 - INFO -  * Restarting with stat
+2026-04-15 02:25:08,493 - WARNING -  * Debugger is active!
+2026-04-15 02:25:08,503 - INFO -  * Debugger PIN: 587-775-760
+2026-04-15 02:25:12,750 - INFO - Prediction: High Risk \U0001f6a8 | Input: {'distance': 80, 'delay': 30, 'weather': 2}
+2026-04-15 02:25:12,751 - INFO - 127.0.0.1 - - [15/Apr/2026 02:25:12] "POST /predict HTTP/1.1" 200 -
+2026-04-15 02:25:59,382 - INFO - 127.0.0.1 - - [15/Apr/2026 02:25:59] "GET /history HTTP/1.1" 200 -
