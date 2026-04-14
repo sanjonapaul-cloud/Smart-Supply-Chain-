@@ -1,0 +1,7 @@
+2026-04-15 02:16:01,736 - WARNING -  * Debugger is active!
+2026-04-15 02:16:01,750 - INFO -  * Debugger PIN: 587-775-760
+2026-04-15 02:17:22,206 - INFO -  * Detected change in 'C:\\Users\\palbi\\OneDrive\\Attachments\\Desktop\\project\\Smart-Supply-Chain-\\backend\\routes\\predict.py', reloading
+2026-04-15 02:17:28,232 - WARNING -  * Debugger is active!
+2026-04-15 02:17:28,249 - INFO -  * Debugger PIN: 587-775-760
+2026-04-15 02:18:32,564 - INFO - Prediction: High Risk \U0001f6a8 | Input: {'distance': 80, 'delay': 30, 'weather': 2}
+2026-04-15 02:18:32,566 - INFO - 127.0.0.1 - - [15/Apr/2026 02:18:32] "POST /predict HTTP/1.1" 200 -
