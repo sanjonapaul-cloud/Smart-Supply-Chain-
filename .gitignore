@@ -3,3 +3,5 @@ node modules
 venv/
 __pycache__/
 *.pyc
+backend/data/history.json
+backend/app.log
