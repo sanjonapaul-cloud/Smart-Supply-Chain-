@@ -26,3 +26,36 @@
 2026-04-15 02:25:12,750 - INFO - Prediction: High Risk \U0001f6a8 | Input: {'distance': 80, 'delay': 30, 'weather': 2}
 2026-04-15 02:25:12,751 - INFO - 127.0.0.1 - - [15/Apr/2026 02:25:12] "POST /predict HTTP/1.1" 200 -
 2026-04-15 02:25:59,382 - INFO - 127.0.0.1 - - [15/Apr/2026 02:25:59] "GET /history HTTP/1.1" 200 -
+2026-04-16 15:55:59,556 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-04-16 15:55:59,556 - INFO - [33mPress CTRL+C to quit[0m
+2026-04-16 15:55:59,563 - INFO -  * Restarting with stat
+2026-04-16 15:56:01,401 - WARNING -  * Debugger is active!
+2026-04-16 15:56:01,403 - INFO -  * Debugger PIN: 911-530-851
+2026-04-16 15:56:53,808 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-04-16 15:56:53,808 - INFO - [33mPress CTRL+C to quit[0m
+2026-04-16 15:56:53,809 - INFO -  * Restarting with stat
+2026-04-16 15:56:55,363 - WARNING -  * Debugger is active!
+2026-04-16 15:56:55,365 - INFO -  * Debugger PIN: 911-530-851
+2026-04-16 15:57:59,901 - INFO - 127.0.0.1 - - [16/Apr/2026 15:57:59] "GET / HTTP/1.1" 200 -
+2026-04-16 15:58:00,019 - INFO - 127.0.0.1 - - [16/Apr/2026 15:58:00] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-04-16 16:05:19,277 - INFO - 127.0.0.1 - - [16/Apr/2026 16:05:19] "OPTIONS /predict HTTP/1.1" 200 -
+2026-04-16 16:05:19,284 - INFO - 127.0.0.1 - - [16/Apr/2026 16:05:19] "[31m[1mPOST /predict HTTP/1.1[0m" 400 -
+2026-04-16 16:07:14,716 - INFO - 127.0.0.1 - - [16/Apr/2026 16:07:14] "OPTIONS /predict HTTP/1.1" 200 -
+2026-04-16 16:07:14,720 - INFO - 127.0.0.1 - - [16/Apr/2026 16:07:14] "[31m[1mPOST /predict HTTP/1.1[0m" 400 -
+2026-04-16 16:21:18,893 - INFO - 127.0.0.1 - - [16/Apr/2026 16:21:18] "OPTIONS /predict HTTP/1.1" 200 -
+2026-04-16 16:21:18,926 - INFO - Prediction: Safe \u2705 | Input: {'distance': 5, 'delay': 3, 'weather': 0}
+2026-04-16 16:21:18,933 - INFO - 127.0.0.1 - - [16/Apr/2026 16:21:18] "POST /predict HTTP/1.1" 200 -
+2026-04-16 16:21:32,629 - INFO - 127.0.0.1 - - [16/Apr/2026 16:21:32] "OPTIONS /predict HTTP/1.1" 200 -
+2026-04-16 16:21:32,641 - INFO - Prediction: Safe \u2705 | Input: {'distance': 5, 'delay': 3, 'weather': 0}
+2026-04-16 16:21:32,642 - INFO - 127.0.0.1 - - [16/Apr/2026 16:21:32] "POST /predict HTTP/1.1" 200 -
+2026-04-16 16:23:52,470 - INFO - 127.0.0.1 - - [16/Apr/2026 16:23:52] "OPTIONS /predict HTTP/1.1" 200 -
+2026-04-16 16:23:52,481 - INFO - Prediction: Safe \u2705 | Input: {'distance': 5, 'delay': 3, 'weather': 0}
+2026-04-16 16:23:52,482 - INFO - 127.0.0.1 - - [16/Apr/2026 16:23:52] "POST /predict HTTP/1.1" 200 -
+2026-04-16 16:24:05,129 - INFO - 127.0.0.1 - - [16/Apr/2026 16:24:05] "OPTIONS /predict HTTP/1.1" 200 -
+2026-04-16 16:24:05,148 - INFO - Prediction: Safe \u2705 | Input: {'distance': 5, 'delay': 1, 'weather': 1}
+2026-04-16 16:24:05,150 - INFO - 127.0.0.1 - - [16/Apr/2026 16:24:05] "POST /predict HTTP/1.1" 200 -
+2026-04-16 16:24:12,417 - INFO - 127.0.0.1 - - [16/Apr/2026 16:24:12] "OPTIONS /predict HTTP/1.1" 200 -
+2026-04-16 16:24:12,429 - INFO - Prediction: High Risk \U0001f6a8 | Input: {'distance': 70, 'delay': 45, 'weather': 1}
+2026-04-16 16:24:12,431 - INFO - 127.0.0.1 - - [16/Apr/2026 16:24:12] "POST /predict HTTP/1.1" 200 -
