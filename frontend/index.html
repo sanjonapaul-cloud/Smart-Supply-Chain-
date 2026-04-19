@@ -1,112 +1,44 @@
 <!DOCTYPE html>
-<html class="light" lang="en">
+<html lang="en">
 
 <head>
-  <meta charset="utf-8" />
-  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-  <title>Supply Chain Risk Predictor</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap"
-    rel="stylesheet" />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-    rel="stylesheet" />
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script id="tailwind-config">
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          colors: {
-            "on-secondary": "#ffffff",
-            "secondary-fixed-dim": "#b7c8dc",
-            "primary-fixed": "#d3e4ff",
-            "inverse-primary": "#abc8f4",
-            "on-surface": "#191c1e",
-            "primary": "#001831",
-            "on-primary-fixed-variant": "#2a486d",
-            "on-error": "#ffffff",
-            "background": "#f7f9fb",
-            "error-container": "#ffdad6",
-            "tertiary": "#390003",
-            "primary-fixed-dim": "#abc8f4",
-            "on-error-container": "#93000a",
-            "surface-bright": "#f7f9fb",
-            "on-background": "#191c1e",
-            "tertiary-container": "#600009",
-            "on-secondary-fixed": "#0c1d2b",
-            "surface-tint": "#426086",
-            "tertiary-fixed": "#ffdad7",
-            "inverse-on-surface": "#eff1f3",
-            "on-secondary-container": "#566677",
-            "on-tertiary": "#ffffff",
-            "surface-container": "#eceef0",
-            "on-tertiary-fixed": "#410004",
-            "surface-container-lowest": "#ffffff",
-            "error": "#ba1a1a",
-            "surface-container-low": "#f2f4f6",
-            "on-primary-fixed": "#001c38",
-            "on-primary": "#ffffff",
-            "on-primary-container": "#7795be",
-            "surface-variant": "#e0e3e5",
-            "primary-container": "#082d50",
-            "surface": "#f7f9fb",
-            "tertiary-fixed-dim": "#ffb3ae",
-            "inverse-surface": "#2d3133",
-            "secondary-fixed": "#d3e4f9",
-            "on-secondary-fixed-variant": "#384858",
-            "on-tertiary-fixed-variant": "#930014",
-            "secondary": "#506071",
-            "surface-container-highest": "#e0e3e5",
-            "on-surface-variant": "#43474f",
-            "secondary-container": "#d3e4f9",
-            "outline": "#747780",
-            "outline-variant": "#c4c6d0",
-            "on-tertiary-container": "#ff5a57",
-            "surface-dim": "#d8dadc",
-            "surface-container-high": "#e6e8ea"
-          },
-          borderRadius: {
-            DEFAULT: "0.25rem",
-            lg: "0.5rem",
-            xl: "0.75rem",
-            full: "9999px"
-          },
-          fontFamily: {
-            headline: ["Manrope"],
-            body: ["Inter"],
-            label: ["Inter"]
-          }
-        }
-      }
-    };
-  </script>
-  <link rel="stylesheet" href="css/style.css" />
+	<meta charset="utf-8" />
+	<meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <meta name="api-base-url" content="http://127.0.0.1:5000">
+	<title>Supply Chain Risk Predictor</title>
+	<link
+		href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap"
+		rel="stylesheet" />
+	<link
+		href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+		rel="stylesheet" />
+	<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<link rel="stylesheet" href="css/style.css" />
 </head>
 
-<body class="bg-surface text-on-surface min-h-screen flex">
-  <div id="sidebar-slot"></div>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex">
+	<div id="sidebar-slot"></div>
 
-  <main class="flex-1 lg:ml-64 flex flex-col min-h-screen">
-    <div id="navbar-slot"></div>
+	<main class="flex-1 lg:ml-64 flex flex-col min-h-screen">
+		<div id="navbar-slot"></div>
 
-    <section class="p-4 md:p-8 max-w-7xl mx-auto w-full">
-      <div id="cards-slot"></div>
-    </section>
+		<section class="p-4 md:p-8 max-w-7xl mx-auto w-full">
+			<div id="cards-slot"></div>
+		</section>
 
-    <footer
-      class="mt-auto py-8 px-8 border-t border-outline-variant/10 flex flex-col sm:flex-row gap-4 sm:justify-between sm:items-center text-on-surface-variant text-xs">
-      <p>© 2023 Sentinel Systems. All rights reserved.</p>
-      <div class="flex gap-6">
-        <a class="hover:text-primary" href="#">System Status</a>
-        <a class="hover:text-primary" href="#">API Documentation</a>
-        <a class="hover:text-primary" href="#">Privacy Shield</a>
-      </div>
-    </footer>
-  </main>
+		<footer
+			class="mt-auto py-8 px-8 border-t border-slate-200 flex flex-col sm:flex-row gap-4 sm:justify-between sm:items-center text-slate-500 text-xs">
+			<p>© 2023 Sentinel Systems. All rights reserved.</p>
+			<div class="flex gap-6">
+				<a class="hover:text-slate-900" href="#">System Status</a>
+				<a class="hover:text-slate-900" href="#">API Documentation</a>
+				<a class="hover:text-slate-900" href="#">Privacy Shield</a>
+			</div>
+		</footer>
+	</main>
 
-  <script type="module" src="js/main.js"></script>
+	<script type="module" src="js/main.js"></script>
 </body>
 
 </html>

@@ -1,39 +1,39 @@
 <div class="space-y-8">
   <div class="flex flex-col gap-2">
-    <h1 class="text-2xl md:text-3xl font-extrabold text-primary flex items-center gap-3">
+    <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 flex items-center gap-3">
       <span class="material-symbols-outlined text-3xl" data-icon="local_shipping">local_shipping</span>
       Supply Chain Risk Predictor
     </h1>
-    <p class="text-on-surface-variant text-sm md:text-base">Predict delivery disruptions with AI-powered logistics intelligence.</p>
+    <p class="text-slate-500 text-sm md:text-base">Predict delivery disruptions with AI-powered logistics intelligence.</p>
   </div>
 
   <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 xl:gap-8 items-start">
     <div class="xl:col-span-4">
-      <div class="bg-surface-container-lowest rounded-2xl p-6 md:p-8 border border-outline-variant/20 card-soft">
+      <div class="bg-white rounded-2xl p-6 md:p-8 border border-slate-200 card-soft">
         <div class="flex items-center justify-between mb-6">
-          <h2 class="text-xl font-bold text-primary">Calculate Risk</h2>
-          <span class="material-symbols-outlined text-on-surface-variant" data-icon="analytics">analytics</span>
+          <h2 class="text-xl font-bold text-slate-900">Calculate Risk</h2>
+          <span class="material-symbols-outlined text-slate-500" data-icon="analytics">analytics</span>
         </div>
 
         <form class="space-y-5" id="predictionForm">
           <div class="space-y-2">
-            <label class="text-xs font-semibold tracking-wide text-on-surface-variant block" for="distance">DISTANCE (KM)</label>
+            <label class="text-xs font-semibold tracking-wide text-slate-500 block" for="distance">DISTANCE (KM)</label>
             <input id="distance"
-              class="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              class="w-full bg-slate-100 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 focus:ring-2 focus:ring-slate-300 focus:border-slate-400"
               placeholder="Enter distance in kilometers" type="number" />
           </div>
 
           <div class="space-y-2">
-            <label class="text-xs font-semibold tracking-wide text-on-surface-variant block" for="delay">ESTIMATED DELAY (HOURS)</label>
+            <label class="text-xs font-semibold tracking-wide text-slate-500 block" for="delay">ESTIMATED DELAY (HOURS)</label>
             <input id="delay"
-              class="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              class="w-full bg-slate-100 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 focus:ring-2 focus:ring-slate-300 focus:border-slate-400"
               placeholder="Hours beyond schedule" type="number" />
           </div>
 
           <div class="space-y-2">
-            <label class="text-xs font-semibold tracking-wide text-on-surface-variant block" for="weather">WEATHER CONDITIONS</label>
+            <label class="text-xs font-semibold tracking-wide text-slate-500 block" for="weather">WEATHER CONDITIONS</label>
             <select id="weather"
-              class="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/30 focus:border-primary">
+              class="w-full bg-slate-100 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 focus:ring-2 focus:ring-slate-300 focus:border-slate-400">
               <option value="">Select Weather</option>
               <option value="0">Good</option>
               <option value="1">Bad</option>
@@ -48,20 +48,20 @@
         </form>
 
         <div id="resultBox"
-          class="hidden mt-6 min-h-[72px] flex items-center justify-center rounded-xl border border-outline-variant/20 px-4 py-4 text-center font-semibold">
+          class="hidden mt-6 min-h-[72px] flex items-center justify-center rounded-xl border border-slate-200 px-4 py-4 text-center font-semibold">
         </div>
       </div>
     </div>
 
     <div class="xl:col-span-8 space-y-6">
-      <div class="bg-surface-container-lowest rounded-2xl border border-outline-variant/20 card-soft overflow-hidden">
-        <div class="px-5 md:px-7 py-5 border-b border-outline-variant/15 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="bg-white rounded-2xl border border-slate-200 card-soft overflow-hidden">
+        <div class="px-5 md:px-7 py-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h2 class="text-lg md:text-xl font-bold text-primary">Intelligence Ledger</h2>
-            <p class="text-sm text-on-surface-variant">Recent predictive historical data</p>
+            <h2 class="text-lg md:text-xl font-bold text-slate-900">Intelligence Ledger</h2>
+            <p class="text-sm text-slate-500">Recent predictive historical data</p>
           </div>
           <button id="refreshHistoryBtn"
-            class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-sm font-medium text-on-surface-variant transition-colors"
+            class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm font-medium text-slate-600 transition-colors"
             type="button">
             <span class="material-symbols-outlined text-sm" data-icon="refresh">refresh</span>
             Refresh
@@ -70,13 +70,13 @@
 
         <div class="overflow-x-auto">
           <table class="w-full text-left min-w-[640px]">
-            <thead class="bg-surface-container-low/70">
+            <thead class="bg-slate-100/80">
               <tr>
-                <th class="px-5 md:px-7 py-3 text-[11px] uppercase tracking-[0.12em] text-on-surface-variant font-bold">Timestamp</th>
-                <th class="px-5 md:px-7 py-3 text-[11px] uppercase tracking-[0.12em] text-on-surface-variant font-bold">Distance</th>
-                <th class="px-5 md:px-7 py-3 text-[11px] uppercase tracking-[0.12em] text-on-surface-variant font-bold">Delay</th>
-                <th class="px-5 md:px-7 py-3 text-[11px] uppercase tracking-[0.12em] text-on-surface-variant font-bold">Weather</th>
-                <th class="px-5 md:px-7 py-3 text-[11px] uppercase tracking-[0.12em] text-on-surface-variant font-bold">Result</th>
+                <th class="px-5 md:px-7 py-3 text-[11px] uppercase tracking-[0.12em] text-slate-500 font-bold">Timestamp</th>
+                <th class="px-5 md:px-7 py-3 text-[11px] uppercase tracking-[0.12em] text-slate-500 font-bold">Distance</th>
+                <th class="px-5 md:px-7 py-3 text-[11px] uppercase tracking-[0.12em] text-slate-500 font-bold">Delay</th>
+                <th class="px-5 md:px-7 py-3 text-[11px] uppercase tracking-[0.12em] text-slate-500 font-bold">Weather</th>
+                <th class="px-5 md:px-7 py-3 text-[11px] uppercase tracking-[0.12em] text-slate-500 font-bold">Result</th>
               </tr>
             </thead>
             <tbody id="historyTable"></tbody>
@@ -84,10 +84,10 @@
         </div>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-2xl border border-outline-variant/20 card-soft p-5 md:p-7">
+      <div class="bg-white rounded-2xl border border-slate-200 card-soft p-5 md:p-7">
         <div class="mb-4">
-          <h2 class="text-lg md:text-xl font-bold text-primary">Risk Analytics</h2>
-          <p class="text-sm text-on-surface-variant mt-1">Live distribution of safe deliveries vs high-risk shipments.</p>
+          <h2 class="text-lg md:text-xl font-bold text-slate-900">Risk Analytics</h2>
+          <p class="text-sm text-slate-500 mt-1">Live distribution of safe deliveries vs high-risk shipments.</p>
         </div>
         <div class="mx-auto w-full max-w-xl h-[280px] md:h-[320px] relative">
           <canvas id="riskChart"></canvas>
