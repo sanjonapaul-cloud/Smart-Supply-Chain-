@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 import pickle
 import datetime
+from pathlib import Path
 import pandas as pd  # ✅ use pandas instead of numpy
 
 from utils.logger import log_info, log_error
@@ -8,14 +9,26 @@ from utils.storage import save_prediction, get_history
 
 predict_bp = Blueprint("predict", __name__)
 
-# load model
-model = pickle.load(open("models/model.pkl", "rb"))
+# load model using a stable path relative to this file
+MODEL_PATH = Path(__file__).resolve().parent.parent / "models" / "model.pkl"
+
+try:
+    with open(MODEL_PATH, "rb") as model_file:
+        model = pickle.load(model_file)
+except FileNotFoundError as e:
+    raise RuntimeError(f"Model file not found at {MODEL_PATH}") from e
 
 
 @predict_bp.route("/predict", methods=["POST"])
 def predict():
     try:
-        data = request.json
+        data = request.get_json(silent=True)
+
+        if not isinstance(data, dict):
+            return jsonify({
+                "status": "error",
+                "message": "Invalid or missing JSON payload"
+            }), 400
 
         # validation
         distance = data.get("distance")
