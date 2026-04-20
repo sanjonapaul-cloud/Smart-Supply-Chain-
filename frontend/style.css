@@ -1,0 +1,167 @@
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+html, body {
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+img,
+svg,
+canvas,
+table {
+  max-width: 100%;
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sapphire-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  color: #475569;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.sapphire-nav-item:hover {
+  background: rgba(0, 74, 198, 0.1);
+  color: #004ac6;
+  transform: translateX(4px);
+}
+
+.sapphire-nav-item.active {
+  background: rgba(0, 74, 198, 0.12);
+  color: #004ac6;
+  font-weight: 600;
+}
+
+.sapphire-nav-item.active span.material-symbols-outlined {
+  font-weight: 600;
+}
+
+.icon-btn {
+  height: 44px;
+  width: 44px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  color: #475569;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover {
+  transform: translateY(-2px);
+  background: #e8eef7;
+  color: #004ac6;
+  border-color: #d4e1f5;
+  box-shadow: 0 4px 12px rgba(0, 74, 198, 0.1);
+}
+
+.icon-btn:active {
+  transform: scale(0.95);
+}
+
+.empty-state {
+  padding: 40px 24px;
+  text-align: center;
+  color: #94a3b8;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  width: 100%;
+  max-width: 100%;
+}
+
+.empty-state p {
+  font-size: 14px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.empty-state p::before {
+  content: '○';
+  font-size: 6px;
+  color: #cbd5e1;
+}
+
+/* Table row styling */
+tbody tr {
+  transition: all 0.15s ease;
+}
+
+tbody tr:hover {
+  background: linear-gradient(to right, rgba(30, 144, 255, 0.04), transparent);
+}
+
+/* Input and select styling */
+input[type="number"],
+input[type="text"],
+select {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Form labels and inputs */
+label {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Ensure buttons don't overflow */
+button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Main layout constraints */
+main, section {
+  width: 100%;
+  max-width: 100%;
+}
+
+.dashboard-card {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 1rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.table-shell {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.table-shell table {
+  min-width: 100%;
+}
