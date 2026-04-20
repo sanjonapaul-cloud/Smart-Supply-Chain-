@@ -5,3 +5,4 @@ __pycache__/
 *.pyc
 backend/data/history.json
 backend/app.log
+app.log

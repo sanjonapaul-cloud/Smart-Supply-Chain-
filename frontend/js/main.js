@@ -61,10 +61,41 @@ async function handlePredictSubmit(event) {
   showPredictionLoading(resultBox);
 
   try {
+    const distanceValue = Number(distance);
+    const delayValue = Number(delay);
+    const weatherValue = Number(weather);
+
+    // Keep the simple UI inputs, but construct the full feature payload
+    // required by the trained backend model.
+    const leadTime = Math.max(1, Math.round(delayValue / 2 + distanceValue / 120));
+    const shippingTimes = Math.max(1, Math.round(delayValue / 6 + distanceValue / 400));
+    const defectRates = Math.min(5, Math.max(0.1, 1.2 + (weatherValue === 1 ? 1.8 : 0) + delayValue / 20));
+
     const predictionResponse = await requestPrediction({
-      distance: Number(distance),
-      delay: Number(delay),
-      weather: Number(weather)
+      // legacy fields for history rendering in the current UI
+      distance: distanceValue,
+      delay: delayValue,
+      weather: weatherValue,
+
+      // full model feature set
+      Price: 50.0,
+      Availability: 70,
+      Number_of_products_sold: 400,
+      Revenue_generated: 12000.0,
+      Stock_levels: 55,
+      Lead_times: leadTime,
+      Shipping_times: shippingTimes,
+      Shipping_carriers: "Carrier B",
+      Shipping_costs: 120.0 + distanceValue * 0.2,
+      Location: "Mumbai",
+      Lead_time: leadTime,
+      Production_volumes: 500,
+      Manufacturing_lead_time: Math.max(1, Math.round(leadTime * 0.7)),
+      Manufacturing_costs: 40.0 + distanceValue * 0.05,
+      Inspection_results: weatherValue === 1 ? "Pending" : "Pass",
+      Defect_rates: defectRates,
+      Transportation_modes: distanceValue < 700 ? "Road" : "Rail",
+      Costs: 180.0 + distanceValue * 0.25
     });
 
     if (predictionResponse.status === "success") {
