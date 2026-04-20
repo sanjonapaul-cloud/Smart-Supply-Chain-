@@ -95,10 +95,28 @@ def predict():
                 "message": "Invalid or missing JSON payload"
             }), 400
 
+        # Preserve original request for history/debug visibility.
+        original_input = dict(data)
+
         # Backward compatibility for legacy frontend payload:
         # { distance, delay, weather }
-        if all(k in data for k in ["distance", "delay", "weather"]):
+        # Only synthesize model features when the request does not already
+        # include model feature fields.
+        def _normalize_key(key):
+            return str(key).lower().replace("_", "").replace(" ", "")
+
+        incoming_keys_normalized = {_normalize_key(k) for k in data.keys()}
+        feature_keys_normalized = {_normalize_key(k) for k in feature_columns}
+
+        has_legacy_triplet = all(k in data for k in ["distance", "delay", "weather"])
+        has_model_features = len(incoming_keys_normalized.intersection(feature_keys_normalized)) > 0
+
+        if has_legacy_triplet and not has_model_features:
             data = _legacy_to_model_payload(data)
+        elif has_legacy_triplet and has_model_features:
+            # Keep provided model values, fill only missing features from legacy mapping.
+            legacy_payload = _legacy_to_model_payload(data)
+            data = {**legacy_payload, **data}
 
         # Normalize feature names: convert any case to match expected column names
         # This allows users to send lowercase keys like 'lead_time' and it maps to 'Lead_time'
@@ -157,7 +175,7 @@ def predict():
 
         prediction_data = {
             "timestamp": str(datetime.datetime.now()),
-            "input": data,
+            "input": original_input,
             "result": result,
             "confidence": float(max(prediction_proba) * 100)
         }
