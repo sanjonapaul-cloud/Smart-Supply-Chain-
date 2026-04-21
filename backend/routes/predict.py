@@ -7,6 +7,7 @@ import numpy as np
 
 from utils.logger import log_info, log_error
 from utils.storage import save_prediction, get_history
+from services.route_analysis_service import get_route_analysis
 
 predict_bp = Blueprint("predict", __name__)
 
@@ -231,3 +232,47 @@ def health():
         "features_count": len(feature_columns),
         "feature_columns": feature_columns
     }), 200
+
+
+@predict_bp.route("/route-analysis", methods=["POST"])
+def route_analysis():
+    """Analyze source-destination route using distance, traffic, and weather services."""
+    try:
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({
+                "status": "error",
+                "message": "Invalid or missing JSON payload",
+                "distance": {"distance_km": 0, "duration_min": 0, "status": "fallback", "error": "Input payload missing"},
+                "traffic": {"current_speed": 0, "free_flow_speed": 0, "congestion_level": "Unknown", "status": "fallback", "error": "Input payload missing"},
+                "weather": {"temperature_celsius": None, "condition": "Unavailable", "humidity": None, "wind_speed_mps": None, "status": "fallback", "error": "Input payload missing"},
+                "route_path": [],
+                "risk_level": "Moderate",
+                "errors": ["Invalid or missing JSON payload"],
+            }), 400
+
+        source = data.get("source")
+        destination = data.get("destination")
+        city = data.get("city")
+
+        analysis = get_route_analysis(source, destination, city)
+
+        route_status = str(analysis.get("status", "success")).lower()
+        http_status = 200
+        if route_status == "error":
+            http_status = 503
+
+        return jsonify(analysis), http_status
+
+    except Exception as e:
+        log_error(f"Route analysis API error: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": "Route analysis failed",
+            "distance": {"distance_km": 0, "duration_min": 0, "status": "error", "error": str(e)},
+            "traffic": {"current_speed": 0, "free_flow_speed": 0, "congestion_level": "Unknown", "status": "error", "error": str(e)},
+            "weather": {"temperature_celsius": None, "condition": "Unavailable", "humidity": None, "wind_speed_mps": None, "status": "error", "error": str(e)},
+            "route_path": [],
+            "risk_level": "Moderate",
+            "errors": [str(e)],
+        }), 500

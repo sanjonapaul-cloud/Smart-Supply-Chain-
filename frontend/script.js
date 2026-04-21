@@ -1,30 +1,60 @@
 const configuredBaseUrl = document.querySelector('meta[name="api-base-url"]')?.content?.trim();
+
 const API_BASE_URLS = [
   configuredBaseUrl,
   'http://localhost:5000',
   'http://127.0.0.1:5000'
 ].filter((value, index, array) => Boolean(value) && array.indexOf(value) === index);
 
+const ROUTE_HISTORY_KEY = 'routeHistory';
+const ROUTE_HISTORY_LIMIT = 10;
+
 const state = {
-  chart: null,
-  latestProbability: null
+  map: null,
+  mapSourceMarker: null,
+  mapDestinationMarker: null,
+  routeLine: null,
+  speedChart: null,
+  isLoading: false
 };
 
-function getRiskState(result) {
-  const raw = String(result || '').toLowerCase();
-  if (raw.includes('high')) {
-    return {
-      isHighRisk: true,
-      label: 'High Risk',
-      icon: 'warning'
-    };
+const sourceMarkerIcon = L.divIcon({
+  className: 'source-pin',
+  html: '<div class="source-marker"></div>',
+  iconSize: [14, 14],
+  iconAnchor: [7, 7]
+});
+
+const destinationMarkerIcon = L.divIcon({
+  className: 'destination-pin',
+  html: '<div class="destination-marker"></div>',
+  iconSize: [14, 14],
+  iconAnchor: [7, 7]
+});
+
+function setMapLoading(isLoading) {
+  const loadingNode = document.getElementById('mapLoading');
+  if (!loadingNode) {
+    return;
   }
 
-  return {
-    isHighRisk: false,
-    label: 'Low Risk',
-    icon: 'check_circle'
-  };
+  if (isLoading) {
+    loadingNode.classList.add('show');
+    return;
+  }
+
+  loadingNode.classList.remove('show');
+}
+
+function setAnalyzeButtonLoading(isLoading) {
+  const button = document.getElementById('analyzeBtn');
+  if (!button) {
+    return;
+  }
+
+  state.isLoading = Boolean(isLoading);
+  button.disabled = state.isLoading;
+  button.textContent = state.isLoading ? 'Analyzing...' : 'Analyze Route';
 }
 
 function toNumber(value, fallback = null) {
@@ -32,23 +62,133 @@ function toNumber(value, fallback = null) {
   return Number.isFinite(number) ? number : fallback;
 }
 
-function safeText(value, fallback = '-') {
-  if (value === null || value === undefined) {
-    return fallback;
+function setMessage(text, type = 'info') {
+  const messageNode = document.getElementById('statusMessage');
+  if (!messageNode) {
+    return;
   }
 
-  const text = String(value).trim();
-  if (!text || text === '[object HTMLInputElement]') {
-    return fallback;
+  if (!text) {
+    messageNode.className = 'status-message';
+    messageNode.textContent = '';
+    return;
   }
 
-  return text;
+  messageNode.className = `status-message show ${type}`;
+  messageNode.textContent = text;
 }
 
-function formatTimestamp(value) {
+async function parseJsonSafely(response) {
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const text = await response.text();
+    throw new Error(`API returned non-JSON response: ${text.slice(0, 120)}`);
+  }
+
+  return response.json();
+}
+
+async function getCoordinates(placeName) {
+  const query = String(placeName || '').trim();
+  if (!query) {
+    throw new Error('Location not found');
+  }
+
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
+  const response = await fetch(url, {
+    headers: {
+      'Accept': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Unable to fetch route data');
+  }
+
+  const results = await response.json();
+  if (!Array.isArray(results) || !results.length) {
+    throw new Error('Location not found');
+  }
+
+  const first = results[0];
+  const lon = Number(first.lon);
+  const lat = Number(first.lat);
+
+  if (!Number.isFinite(lon) || !Number.isFinite(lat)) {
+    throw new Error('Location not found');
+  }
+
+  return [lon, lat];
+}
+
+async function requestRouteAnalysis(payload) {
+  let lastError = new Error('Route analysis service unavailable');
+
+  for (const baseUrl of API_BASE_URLS) {
+    try {
+      const response = await fetch(`${baseUrl}/route-analysis`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await parseJsonSafely(response);
+
+      if (!response.ok) {
+        if (data && typeof data === 'object' && data.distance && data.traffic && data.weather) {
+          return data;
+        }
+
+        lastError = new Error(data?.message || `Route analysis failed: ${response.status}`);
+        continue;
+      }
+
+      return data;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
+}
+
+function getRiskClass(riskLevel) {
+  const level = String(riskLevel || '').toLowerCase();
+  if (level === 'high') {
+    return 'high';
+  }
+  if (level === 'moderate') {
+    return 'moderate';
+  }
+  return 'low';
+}
+
+function readRouteHistory() {
+  try {
+    const raw = localStorage.getItem(ROUTE_HISTORY_KEY);
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeRouteHistory(history) {
+  try {
+    localStorage.setItem(ROUTE_HISTORY_KEY, JSON.stringify(history));
+  } catch {
+    setMessage('Unable to save route history locally.', 'warn');
+  }
+}
+
+function formatHistoryTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return safeText(value, '-');
+    return '-';
   }
 
   return date.toLocaleString([], {
@@ -60,251 +200,230 @@ function formatTimestamp(value) {
   });
 }
 
-async function parseJsonSafely(response, context) {
-  const contentType = response.headers.get('content-type') || '';
-  if (!contentType.includes('application/json')) {
-    const text = await response.text();
-    throw new Error(`${context} expected JSON but received: ${text.slice(0, 120)}`);
-  }
-
-  return response.json();
+function saveRouteHistory(entry) {
+  const currentHistory = readRouteHistory();
+  const nextHistory = [entry, ...currentHistory].slice(0, ROUTE_HISTORY_LIMIT);
+  writeRouteHistory(nextHistory);
+  renderRouteHistory();
 }
 
-async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    return await fetch(url, { ...options, signal: controller.signal });
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-function toConnectionErrorMessage(error) {
-  const rawMessage = String(error?.message || '').toLowerCase();
-  if (rawMessage.includes('failed to fetch') || rawMessage.includes('networkerror') || rawMessage.includes('abort')) {
-    return 'Unable to connect to API. Start backend on port 5000 or check deployed API status.';
-  }
-  return error?.message || 'Server error.';
-}
-
-async function requestPrediction(payload) {
-  let lastError = new Error('Prediction service unavailable');
-
-  for (const baseUrl of API_BASE_URLS) {
-    try {
-      const response = await fetchWithTimeout(`${baseUrl}/predict`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        let message = `Prediction request failed: ${response.status}`;
-        try {
-          const data = await parseJsonSafely(response, 'Prediction API');
-          message = data.message || message;
-        } catch {
-          // Keep default message if response body is not JSON.
-        }
-
-        if (response.status >= 500 || response.status === 404) {
-          lastError = new Error(message);
-          continue;
-        }
-
-        throw new Error(message);
-      }
-
-      return parseJsonSafely(response, 'Prediction API');
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  throw new Error(toConnectionErrorMessage(lastError));
-}
-
-async function fetchHistoryData() {
-  let lastError = new Error('History service unavailable');
-
-  for (const baseUrl of API_BASE_URLS) {
-    try {
-      const response = await fetchWithTimeout(`${baseUrl}/history`, {}, 8000);
-
-      if (!response.ok) {
-        const message = `History request failed: ${response.status}`;
-        if (response.status >= 500 || response.status === 404) {
-          lastError = new Error(message);
-          continue;
-        }
-        throw new Error(message);
-      }
-
-      return parseJsonSafely(response, 'History API');
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  throw new Error(toConnectionErrorMessage(lastError));
-}
-
-function normalizeInputValue(value) {
-  if (value === null || value === undefined) {
-    return '-';
-  }
-
-  if (typeof value === 'object') {
-    if (typeof value.value === 'string' || typeof value.value === 'number') {
-      return value.value;
-    }
-    return '-';
-  }
-
-  const text = String(value).trim();
-  return text && text !== '[object HTMLInputElement]' ? text : '-';
-}
-
-function getHistoryField(item, key) {
-  const input = item?.input;
-  if (input && typeof input === 'object' && input[key] !== undefined) {
-    return input[key];
-  }
-
-  if (item && item[key] !== undefined) {
-    return item[key];
-  }
-
-  return undefined;
-}
-
-function createHistoryRow(item) {
-  const distanceValue = normalizeInputValue(getHistoryField(item, 'distance'));
-  const delayValue = normalizeInputValue(getHistoryField(item, 'delay'));
-  const weatherValue = normalizeInputValue(getHistoryField(item, 'weather'));
-
-  const weatherNormalized = String(weatherValue).trim().toLowerCase();
-  const weatherLabel =
-    weatherNormalized === '2' || weatherNormalized === 'bad'
-      ? 'Bad'
-      : weatherNormalized === '1' || weatherNormalized === 'moderate'
-        ? 'Moderate'
-        : 'Good';
-
-  const risk = getRiskState(item.result);
-  const row = document.createElement('tr');
-  row.className = 'transition-all duration-150 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-transparent';
-  row.innerHTML = `
-    <td class="py-3 sm:py-4 px-3 sm:px-5 text-[12px] sm:text-[13px] text-slate-700 whitespace-nowrap font-medium">${formatTimestamp(item.timestamp)}</td>
-    <td class="py-3 sm:py-4 px-3 sm:px-5 text-[12px] sm:text-[13px] text-slate-800 font-medium">${distanceValue === '-' ? '<span class="text-slate-400">-</span>' : `<span class="text-[#004ac6] font-semibold">${distanceValue}</span> km`}</td>
-    <td class="py-3 sm:py-4 px-3 sm:px-5 text-[12px] sm:text-[13px] text-slate-800 font-medium">${delayValue === '-' ? '<span class="text-slate-400">-</span>' : `<span class="text-[#004ac6] font-semibold">${delayValue}</span> hrs`}</td>
-    <td class="py-3 sm:py-4 px-3 sm:px-5 text-center text-[12px] sm:text-[13px]">
-      <span class="inline-block px-2 sm:px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] sm:text-[12px] font-medium whitespace-nowrap">${weatherLabel}</span>
-    </td>
-    <td class="py-3 sm:py-4 px-3 sm:px-5 text-center">
-      <span class="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-[12px] font-bold whitespace-nowrap ${
-        risk.isHighRisk 
-          ? 'bg-red-100/80 text-red-700 border border-red-200' 
-          : 'bg-green-100/80 text-green-700 border border-green-200'
-      }">
-        <span class="material-symbols-outlined text-[13px] sm:text-[14px] flex-shrink-0">${risk.icon}</span>
-        <span>${risk.label}</span>
-      </span>
-    </td>
-  `;
-
-  return row;
-}
-
-function appendHistoryRow(item, tableElement) {
-  if (!tableElement) {
+function renderRouteHistory() {
+  const list = document.getElementById('historyList');
+  if (!list) {
     return;
   }
 
-  const emptyRow = tableElement.querySelector('.empty-state');
-  if (emptyRow) {
-    tableElement.innerHTML = '';
+  const history = readRouteHistory();
+  if (!history.length) {
+    list.innerHTML = '<div class="history-empty">No recent routes</div>';
+    return;
   }
 
-  const row = createHistoryRow(item);
-  tableElement.prepend(row);
-}
+  list.innerHTML = history.map((item, index) => {
+    const riskClass = getRiskClass(item.risk || 'Low');
+    const source = String(item.source || '-');
+    const destination = String(item.destination || '-');
+    const distance = Number.isFinite(Number(item.distance)) ? Number(item.distance).toFixed(2) : '0.00';
+    const duration = Number.isFinite(Number(item.duration)) ? Number(item.duration).toFixed(2) : '0.00';
 
-function renderHistoryTable(entries, tableElement) {
-  tableElement.innerHTML = '';
-
-  if (!entries.length) {
-    tableElement.innerHTML = `
-      <tr>
-        <td colspan="5" class="empty-state">
-          <p>No predictions yet. Run a risk analysis to populate the ledger.</p>
-        </td>
-      </tr>
+    return `
+      <button type="button" class="history-item" data-history-index="${index}" title="Load this route and run analysis">
+        <div>
+          <div class="history-route">${source} -> ${destination}</div>
+          <span class="history-meta">Distance: ${distance} km | Duration: ${duration} min</span>
+        </div>
+        <span class="history-risk ${riskClass}">${item.risk || 'Low'}</span>
+        <div class="history-time">${formatHistoryTime(item.timestamp)}</div>
+      </button>
     `;
+  }).join('');
+}
+
+function clearRouteHistory() {
+  localStorage.removeItem(ROUTE_HISTORY_KEY);
+  renderRouteHistory();
+  setMessage('Route history cleared.', 'info');
+}
+
+async function handleHistorySelection(event) {
+  const target = event.target.closest('[data-history-index]');
+  if (!target) {
     return;
   }
 
-  entries.forEach((item) => {
-    tableElement.appendChild(createHistoryRow(item));
+  const index = Number(target.getAttribute('data-history-index'));
+  if (!Number.isFinite(index)) {
+    return;
+  }
+
+  const history = readRouteHistory();
+  const selected = history[index];
+  if (!selected) {
+    return;
+  }
+
+  const sourceInput = document.getElementById('sourcePlace');
+  const destinationInput = document.getElementById('destinationPlace');
+  if (!sourceInput || !destinationInput) {
+    return;
+  }
+
+  sourceInput.value = selected.source || '';
+  destinationInput.value = selected.destination || '';
+
+  const form = document.getElementById('routeAnalysisForm');
+  if (form && !state.isLoading) {
+    form.requestSubmit();
+  }
+}
+
+function updateCards(data) {
+  const distance = data.distance || {};
+  const traffic = data.traffic || {};
+  const weather = data.weather || {};
+
+  const distanceKm = toNumber(distance.distance_km, 0);
+  const durationMin = toNumber(distance.duration_min, 0);
+
+  const currentSpeed = toNumber(traffic.current_speed, 0);
+  const freeFlowSpeed = toNumber(traffic.free_flow_speed, 0);
+
+  const condition = weather.condition || 'Unavailable';
+  const temp = weather.temperature_celsius;
+  const wind = weather.wind_speed_mps;
+
+  document.getElementById('distanceValue').textContent = `${distanceKm.toFixed(2)} km`;
+  document.getElementById('durationValue').textContent = `Duration: ${durationMin.toFixed(2)} min`;
+
+  document.getElementById('trafficValue').textContent = traffic.congestion_level || 'Unknown';
+  document.getElementById('speedValue').textContent = `Current: ${currentSpeed} | Free Flow: ${freeFlowSpeed}`;
+
+  document.getElementById('weatherCondition').textContent = condition;
+  document.getElementById('weatherDetails').textContent = `Temp: ${temp ?? '-'} C | Wind: ${wind ?? '-'} m/s`;
+
+  const riskLevel = data.risk_level || 'Moderate';
+  const modelType = String(data.model || 'fallback').toLowerCase();
+  const riskCard = document.getElementById('riskCard');
+  riskCard.classList.remove('low', 'moderate', 'high');
+  riskCard.classList.add(getRiskClass(riskLevel));
+
+  document.getElementById('riskValue').textContent = riskLevel;
+  document.getElementById('riskStatus').textContent = `Status: ${data.status || 'unknown'} | Model: ${modelType === 'ml' ? 'ML Prediction' : 'Fallback Rules'}`;
+}
+
+function initMap() {
+  if (state.map) {
+    return;
+  }
+
+  state.map = L.map('routeMap', {
+    zoomControl: true
+  }).setView([22.57, 88.36], 5);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(state.map);
+}
+
+function updateMap(sourceCoords, destinationCoords, routePath = []) {
+  initMap();
+
+  const sourceLatLng = [sourceCoords[1], sourceCoords[0]];
+  const destinationLatLng = [destinationCoords[1], destinationCoords[0]];
+
+  if (state.mapSourceMarker) {
+    state.map.removeLayer(state.mapSourceMarker);
+  }
+  if (state.mapDestinationMarker) {
+    state.map.removeLayer(state.mapDestinationMarker);
+  }
+  if (state.routeLine) {
+    state.map.removeLayer(state.routeLine);
+  }
+
+  state.mapSourceMarker = L.marker(sourceLatLng, { icon: sourceMarkerIcon }).addTo(state.map).bindPopup('Source');
+  state.mapDestinationMarker = L.marker(destinationLatLng, { icon: destinationMarkerIcon }).addTo(state.map).bindPopup('Destination');
+
+  const normalizedRoutePath = Array.isArray(routePath)
+    ? routePath
+      .filter((point) => Array.isArray(point) && point.length >= 2)
+      .map((point) => [point[1], point[0]])
+    : [];
+
+  if (normalizedRoutePath.length >= 2) {
+    state.routeLine = L.polyline(normalizedRoutePath, {
+      color: '#2f7bff',
+      weight: 5,
+      opacity: 0.92
+    }).addTo(state.map);
+  } else {
+    state.routeLine = L.polyline([sourceLatLng, destinationLatLng], {
+      color: '#f3a01f',
+      weight: 4,
+      opacity: 0.85,
+      dashArray: '10 8'
+    }).addTo(state.map);
+
+    setMessage('Detailed route unavailable. Showing straight fallback line.', 'warn');
+  }
+
+  state.map.fitBounds(state.routeLine.getBounds(), {
+    padding: [30, 30]
   });
 }
 
-function renderRiskChart(entries, canvas, riskProbability = null) {
+function updateSpeedChart(data) {
+  const traffic = data.traffic || {};
+  const currentSpeed = toNumber(traffic.current_speed, 0);
+  const freeFlowSpeed = toNumber(traffic.free_flow_speed, 0);
+
+  const canvas = document.getElementById('speedChart');
   if (!canvas || typeof Chart === 'undefined') {
     return;
   }
 
-  let safe = 0;
-  let high = 0;
-
-  if (riskProbability && Number.isFinite(Number(riskProbability.safe)) && Number.isFinite(Number(riskProbability.high_risk))) {
-    safe = Number(riskProbability.safe);
-    high = Number(riskProbability.high_risk);
-    state.latestProbability = riskProbability;
-  } else {
-    entries.forEach((item) => {
-      if (String(item.result).includes('High')) {
-        high += 1;
-      } else {
-        safe += 1;
-      }
-    });
-    state.latestProbability = null;
+  if (state.speedChart) {
+    state.speedChart.destroy();
   }
 
-  const ctx = canvas.getContext('2d');
-  if (state.chart) {
-    state.chart.destroy();
-  }
-
-  state.chart = new Chart(ctx, {
-    type: 'doughnut',
+  state.speedChart = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
     data: {
-      labels: ['Low Risk', 'High Risk'],
-      datasets: [{
-        data: [safe, high],
-        backgroundColor: ['#d1fae5', '#fee2e2'],
-        borderColor: ['#10b981', '#ef4444'],
-        borderWidth: 0,
-        hoverOffset: 8
-      }]
+      labels: ['Current Speed', 'Free Flow Speed'],
+      datasets: [
+        {
+          label: 'Speed',
+          data: [currentSpeed, freeFlowSpeed],
+          backgroundColor: ['#f59e0b', '#22c55e'],
+          borderRadius: 10
+        }
+      ]
     },
     options: {
-      maintainAspectRatio: false,
       responsive: true,
-      cutout: '68%',
+      maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'bottom' },
-        tooltip: {
-          callbacks: {
-            label(context) {
-              const value = Number(context.raw) || 0;
-              return state.latestProbability
-                ? `${context.label}: ${value.toFixed(1)}%`
-                : `${context.label}: ${value}`;
-            }
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: '#d6e3ef'
+          },
+          grid: {
+            color: 'rgba(155, 178, 196, 0.2)'
+          }
+        },
+        x: {
+          ticks: {
+            color: '#d6e3ef'
+          },
+          grid: {
+            color: 'rgba(155, 178, 196, 0.08)'
           }
         }
       }
@@ -312,194 +431,108 @@ function renderRiskChart(entries, canvas, riskProbability = null) {
   });
 }
 
-function setResultCardState(card, isHighRisk, prediction, confidence, riskProbability) {
-  card.className = `mt-4 min-h-[150px] rounded-2xl p-5 flex flex-col items-center justify-center text-center [box-shadow:0_10px_30px_rgba(0,0,0,0.08)] ${
-    isHighRisk ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'
-  }`;
+function getFormPayload() {
+  const sourcePlace = (document.getElementById('sourcePlace').value || '').trim();
+  const destinationPlace = (document.getElementById('destinationPlace').value || '').trim();
 
-  const confidenceValue = Number(confidence);
-  const safeProbability = Number(riskProbability?.safe ?? (isHighRisk ? 100 - confidenceValue : confidenceValue));
-  const highProbability = Number(riskProbability?.high_risk ?? (isHighRisk ? confidenceValue : 100 - confidenceValue));
-  const riskState = getRiskState(prediction);
-
-  card.innerHTML = `
-    <p class="text-[12px] uppercase tracking-[0.16em] font-semibold text-slate-700">Prediction Result</p>
-    <div class="mt-2 inline-flex items-center gap-2 text-[30px] font-bold leading-none">
-      <span class="material-symbols-outlined text-[30px]">${riskState.icon}</span>
-      ${riskState.label}
-    </div>
-    <p class="mt-2 text-[14px] font-semibold">Confidence: ${Number.isFinite(confidenceValue) ? confidenceValue.toFixed(1) : '-'}%</p>
-    <p class="mt-1 text-[14px] font-medium text-slate-700">
-      <span class="text-green-700">Low Risk: ${Number.isFinite(safeProbability) ? safeProbability.toFixed(1) : '-'}%</span>
-      <span class="text-slate-400"> | </span>
-      <span class="text-red-600">High Risk: ${Number.isFinite(highProbability) ? highProbability.toFixed(1) : '-'}%</span>
-    </p>
-  `;
-}
-
-function showLoading(card) {
-  card.className = 'mt-4 min-h-[150px] rounded-2xl p-5 flex flex-col items-center justify-center text-center bg-gradient-to-br from-[#eaf1ff] to-[#f4f7ff] text-[#004ac6] [box-shadow:0_10px_30px_rgba(0,0,0,0.08)]';
-  card.innerHTML = `
-    <span class="material-symbols-outlined text-[28px]">hourglass_top</span>
-    <p class="mt-2 text-[20px] font-bold">Awaiting Parameters</p>
-    <p class="mt-1 text-[14px] text-slate-600">Analyzing route data for live risk probabilities.</p>
-  `;
-}
-
-function showError(card, message) {
-  card.className = 'mt-4 min-h-[150px] rounded-2xl p-5 flex flex-col items-center justify-center text-center bg-red-100 text-red-600 [box-shadow:0_10px_30px_rgba(0,0,0,0.08)]';
-  card.innerHTML = `
-    <p class="text-[20px] font-bold">Prediction Error</p>
-    <p class="mt-1 text-[14px]">${safeText(message, 'Server error')}</p>
-  `;
-}
-
-function buildModelPayload(distance, delay, weather) {
-  const distanceValue = toNumber(distance, 0);
-  const delayValue = toNumber(delay, 0);
-  const weatherValue = toNumber(weather, 0);
-
-  const leadTime = Math.max(1, Math.round(delayValue / 2 + distanceValue / 120));
-  const shippingTimes = Math.max(1, Math.round(delayValue / 6 + distanceValue / 400));
-  const defectRates = Math.min(5, Math.max(0.1, 1.2 + (weatherValue === 2 ? 1.8 : weatherValue === 1 ? 0.8 : 0) + delayValue / 20));
+  if (!sourcePlace || !destinationPlace) {
+    throw new Error('Location not found');
+  }
 
   return {
-    distance: distanceValue,
-    delay: delayValue,
-    weather: weatherValue,
-    Price: 50,
-    Availability: 70,
-    Number_of_products_sold: 400,
-    Revenue_generated: 12000,
-    Stock_levels: 55,
-    Lead_times: leadTime,
-    Shipping_times: shippingTimes,
-    Shipping_carriers: 'Carrier B',
-    Shipping_costs: 120 + distanceValue * 0.2,
-    Location: 'Mumbai',
-    Lead_time: leadTime,
-    Production_volumes: 500,
-    Manufacturing_lead_time: Math.max(1, Math.round(leadTime * 0.7)),
-    Manufacturing_costs: 40 + distanceValue * 0.05,
-    Inspection_results: weatherValue === 2 ? 'Pending' : 'Pass',
-    Defect_rates: defectRates,
-    Transportation_modes: distanceValue < 700 ? 'Road' : 'Rail',
-    Costs: 180 + distanceValue * 0.25
+    sourcePlace,
+    destinationPlace
   };
 }
 
-async function refreshDashboardData() {
-  const historyTable = document.getElementById('historyTable');
-  const riskChart = document.getElementById('riskChart');
+function handleStatusMessage(apiResponse) {
+  const responseStatus = String(apiResponse.status || '').toLowerCase();
+  const errors = Array.isArray(apiResponse.errors) ? apiResponse.errors.filter(Boolean) : [];
 
-  if (!historyTable || !riskChart) {
+  if (responseStatus === 'success' && !errors.length) {
+    setMessage('Route analyzed successfully.', 'info');
     return;
   }
 
-  try {
-    const historyResponse = await fetchHistoryData();
-    const entries = Array.isArray(historyResponse.data) ? historyResponse.data : [];
-    
-    // Only render if we have entries to show
-    if (entries.length > 0) {
-      renderHistoryTable(entries, historyTable);
-      renderRiskChart(entries, riskChart, state.latestProbability);
-    } else {
-      // If no backend data, just update the chart with latest probability
-      if (state.latestProbability) {
-        renderRiskChart([], riskChart, state.latestProbability);
-      }
-    }
-  } catch (error) {
-    // Silent failure - don't wipe the table on error
-    // Just update chart if we have probability data
-    if (state.latestProbability && riskChart) {
-      renderRiskChart([], riskChart, state.latestProbability);
-    }
+  if (responseStatus === 'fallback' || errors.length) {
+    const details = errors.length ? ` Details: ${errors.join(' | ')}` : '';
+    setMessage(`Some data unavailable, showing best estimate.${details}`, 'warn');
+    return;
   }
+
+  setMessage('Some services are unavailable. Displaying fallback values.', 'error');
 }
 
-async function handlePredictSubmit(event) {
+async function onAnalyzeRoute(event) {
   event.preventDefault();
 
-  const distance = document.getElementById('distance')?.value;
-  const delay = document.getElementById('delay')?.value;
-  const weather = document.getElementById('weather')?.value;
-  const resultCard = document.getElementById('resultCard');
-  const riskChart = document.getElementById('riskChart');
-  const historyTable = document.getElementById('historyTable');
-
-  if (!resultCard) {
-    return;
-  }
-
-  if (distance === '' || delay === '' || weather === '') {
-    showError(resultCard, 'Please fill in all fields.');
-    return;
-  }
-
-  showLoading(resultCard);
+  setMessage('Resolving locations and analyzing route...', 'info');
+  setMapLoading(true);
+  setAnalyzeButtonLoading(true);
 
   try {
-    const payload = buildModelPayload(distance, delay, weather);
-    const predictionResponse = await requestPrediction(payload);
+    const placePayload = getFormPayload();
+    const [sourceCoords, destinationCoords] = await Promise.all([
+      getCoordinates(placePayload.sourcePlace),
+      getCoordinates(placePayload.destinationPlace)
+    ]);
 
-    if (predictionResponse.status === 'success') {
-      const isHighRisk = String(predictionResponse.prediction).includes('High');
-      const riskState = getRiskState(predictionResponse.prediction);
+    const payload = {
+      source: sourceCoords,
+      destination: destinationCoords,
+      city: placePayload.sourcePlace
+    };
 
-      // Immediate UI feedback: append a local history row right after prediction.
-      appendHistoryRow(
-        {
-          timestamp: new Date().toISOString(),
-          distance: toNumber(distance, 0),
-          delay: toNumber(delay, 0),
-          weather: toNumber(weather, 0),
-          result: riskState.label
-        },
-        historyTable
-      );
+    const analysis = await requestRouteAnalysis(payload);
 
-      setResultCardState(
-        resultCard,
-        isHighRisk,
-        predictionResponse.prediction,
-        predictionResponse.confidence,
-        predictionResponse.risk_probability
-      );
+    updateCards(analysis);
+    updateMap(sourceCoords, destinationCoords, analysis.route_path || analysis.distance?.route_path || []);
+    updateSpeedChart(analysis);
+    handleStatusMessage(analysis);
 
-      await refreshDashboardData();
-      if (riskChart) {
-        renderRiskChart([], riskChart, predictionResponse.risk_probability);
-      }
-    } else {
-      showError(resultCard, predictionResponse.message || 'Prediction failed.');
+    const responseStatus = String(analysis.status || '').toLowerCase();
+    if (responseStatus !== 'error') {
+      saveRouteHistory({
+        source: placePayload.sourcePlace,
+        destination: placePayload.destinationPlace,
+        risk: analysis.risk_level || 'Moderate',
+        distance: analysis.distance?.distance_km ?? 0,
+        duration: analysis.distance?.duration_min ?? 0,
+        timestamp: new Date().toISOString()
+      });
     }
   } catch (error) {
-    showError(resultCard, toConnectionErrorMessage(error));
+    const raw = String(error?.message || '');
+    if (raw.toLowerCase().includes('location not found')) {
+      setMessage('Location not found', 'error');
+    } else {
+      setMessage('Unable to fetch route data', 'error');
+    }
+  } finally {
+    setMapLoading(false);
+    setAnalyzeButtonLoading(false);
   }
 }
 
-function bindEvents() {
-  const predictionForm = document.getElementById('predictionForm');
-  const refreshButton = document.getElementById('refreshHistoryBtn');
+function initialize() {
+  const form = document.getElementById('routeAnalysisForm');
+  const clearButton = document.getElementById('clearHistoryBtn');
+  const historyList = document.getElementById('historyList');
 
-  predictionForm?.addEventListener('submit', handlePredictSubmit);
-  refreshButton?.addEventListener('click', refreshDashboardData);
-}
-
-async function initializeDashboard() {
-  bindEvents();
-  const resultCard = document.getElementById('resultCard');
-  if (resultCard) {
-    resultCard.className = 'mt-4 min-h-[150px] rounded-2xl p-5 flex flex-col items-center justify-center text-center bg-gradient-to-br from-[#eaf1ff] to-[#f4f7ff] [box-shadow:0_10px_30px_rgba(0,0,0,0.08)]';
-    resultCard.innerHTML = `
-      <span class="material-symbols-outlined text-[32px] text-slate-400">autorenew</span>
-      <p class="mt-3 text-[20px] font-bold">Awaiting Parameters</p>
-      <p class="mt-1 text-[14px] text-slate-600">Input route data to generate a real-time risk probability matrix.</p>
-    `;
+  if (form) {
+    form.addEventListener('submit', onAnalyzeRoute);
   }
-  await refreshDashboardData();
+
+  if (clearButton) {
+    clearButton.addEventListener('click', clearRouteHistory);
+  }
+
+  if (historyList) {
+    historyList.addEventListener('click', handleHistorySelection);
+  }
+
+  initMap();
+  renderRouteHistory();
 }
 
-document.addEventListener('DOMContentLoaded', initializeDashboard);
+document.addEventListener('DOMContentLoaded', initialize);
