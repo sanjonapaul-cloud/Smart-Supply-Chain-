@@ -1,7 +1,16 @@
 print("File is running")
-import requests
 
-API_KEY = "API_KEY"
+import requests
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_KEY = os.getenv("DISTANCE_API_KEY")
+
+if not API_KEY:
+    raise ValueError("DISTANCE_API_KEY not found in environment variables")
+
 URL = "https://api.openrouteservice.org/v2/directions/driving-car"
 
 
@@ -13,7 +22,7 @@ def get_distance(source_coords, destination_coords):
         or len(source_coords) != 2
         or len(destination_coords) != 2
     ):
-        raise ValueError("Invalid coordinates format. Use [longitude, latitude].")
+        return {"error": "Invalid coordinates format. Use [longitude, latitude]."}
 
     headers = {
         "Authorization": API_KEY,
@@ -28,10 +37,8 @@ def get_distance(source_coords, destination_coords):
     }
 
     try:
-        response = requests.post(URL, json=body, headers=headers)
-
-        if response.status_code != 200:
-            raise Exception(f"API Error: {response.status_code} - {response.text}")
+        response = requests.post(URL, json=body, headers=headers, timeout=5)
+        response.raise_for_status()
 
         data = response.json()
 
@@ -40,23 +47,19 @@ def get_distance(source_coords, destination_coords):
         duration_min = round(summary["duration"] / 60, 2)
 
         return {
-            "distance": distance_km,
-            "duration": duration_min
+            "distance_km": distance_km,
+            "duration_min": duration_min
         }
 
     except requests.exceptions.RequestException as e:
-        raise Exception(f"Request failed: {str(e)}")
+        return {"error": f"Request failed: {str(e)}"}
 
     except (KeyError, IndexError):
-        raise Exception("Invalid response format from API")
+        return {"error": "Invalid response format from API"}
 
 
-# ✅ THIS MUST BE OUTSIDE THE FUNCTION
 if __name__ == "__main__":
     print("MAIN BLOCK WORKING")
 
-    try:
-        result = get_distance([88.36, 22.57], [77.10, 28.70])
-        print("RESULT:", result)
-    except Exception as e:
-        print("ERROR:", e)
+    result = get_distance([88.36, 22.57], [77.10, 28.70])
+    print("RESULT:", result)

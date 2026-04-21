@@ -1,32 +1,21 @@
-# traffic_service.py
-
 import requests
+import os
+from dotenv import load_dotenv
 
-# Replace with your actual TomTom API key
-API_KEY = "YOUR_API_KEY"
+load_dotenv()
+
+API_KEY = os.getenv("TOMTOM_API_KEY")
+
+if not API_KEY:
+    raise ValueError("TOMTOM_API_KEY not found in environment variables")
 
 BASE_URL = "https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json"
 
 
 def get_traffic(lat, lon):
-    """
-    Fetch traffic data from TomTom API and return structured response.
 
-    Args:
-        lat (float): Latitude
-        lon (float): Longitude
-
-    Returns:
-        dict: {
-            "current_speed": int,
-            "free_flow_speed": int,
-            "congestion_level": str
-        }
-    """
-
-    # Validate inputs
     if not isinstance(lat, (int, float)) or not isinstance(lon, (int, float)):
-        raise ValueError("Invalid coordinates: must be float or int")
+        return {"error": "Invalid coordinates"}
 
     try:
         params = {
@@ -35,22 +24,17 @@ def get_traffic(lat, lon):
         }
 
         response = requests.get(BASE_URL, params=params, timeout=5)
-
-        # Check API response
-        if response.status_code != 200:
-            raise Exception(f"API Error: {response.status_code}")
+        response.raise_for_status()
 
         data = response.json()
+        flow = data.get("flowSegmentData", {})
 
-        # Extract speeds
-        flow_data = data.get("flowSegmentData", {})
-        current_speed = flow_data.get("currentSpeed")
-        free_flow_speed = flow_data.get("freeFlowSpeed")
+        current_speed = flow.get("currentSpeed")
+        free_flow_speed = flow.get("freeFlowSpeed")
 
         if current_speed is None or free_flow_speed is None:
-            raise Exception("Invalid API response structure")
+            return {"error": "Invalid API response"}
 
-        # Calculate congestion level
         ratio = current_speed / free_flow_speed
 
         if ratio >= 0.8:
@@ -67,16 +51,11 @@ def get_traffic(lat, lon):
         }
 
     except requests.exceptions.RequestException as e:
-        raise Exception(f"Request failed: {str(e)}")
+        return {"error": f"Request failed: {str(e)}"}
 
     except Exception as e:
-        raise Exception(f"Traffic service error: {str(e)}")
+        return {"error": str(e)}
 
 
-# Example usage
 if __name__ == "__main__":
-    try:
-        traffic = get_traffic(22.57, 88.36)
-        print(traffic)
-    except Exception as e:
-        print(e)
+    print(get_traffic(22.57, 88.36))

@@ -1,59 +1,48 @@
 # weather_service.py
 
 import requests
+import os
+from dotenv import load_dotenv
 
-# Replace with your actual OpenWeather API key
-API_KEY = "YOUR_API_KEY"
+load_dotenv()
+
+API_KEY = os.getenv("WEATHER_API_KEY")
+
+if not API_KEY:
+    raise ValueError("WEATHER_API_KEY not found in environment variables")
+
 BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
 
 
 def get_weather(city_name):
-    """
-    Fetch weather details for a given city.
 
-    Args:
-        city_name (str): Name of the city
+    if not isinstance(city_name, str) or not city_name.strip():
+        return {"error": "Invalid city name"}
 
-    Returns:
-        dict: Weather details (temperature in Celsius, condition, humidity, wind speed)
-              OR error message in case of failure
-    """
     try:
         params = {
             "q": city_name,
-            "appid": API_KEY
+            "appid": API_KEY,
+            "units": "metric"
         }
 
-        response = requests.get(BASE_URL, params=params)
-
-        # Handle HTTP errors
-        if response.status_code != 200:
-            return {
-                "error": "City not found or API request failed"
-            }
+        response = requests.get(BASE_URL, params=params, timeout=5)
+        response.raise_for_status()
 
         data = response.json()
 
-        # Extract required fields
-        temperature_kelvin = data["main"]["temp"]
-        temperature_celsius = round(temperature_kelvin - 273.15, 2)
-
-        weather_condition = data["weather"][0]["main"]
-        humidity = data["main"]["humidity"]
-        wind_speed = data["wind"]["speed"]
-
         return {
-            "temperature": temperature_celsius,
-            "condition": weather_condition,
-            "humidity": humidity,
-            "wind_speed": wind_speed
+            "temperature_celsius": data["main"]["temp"],
+            "condition": data["weather"][0]["main"],
+            "humidity": data["main"]["humidity"],
+            "wind_speed_mps": data["wind"]["speed"]
         }
 
-    except requests.exceptions.RequestException:
-        return {
-            "error": "API request failed due to network issue"
-        }
-    except KeyError:
-        return {
-            "error": "Unexpected response format"
-        }
+    except requests.exceptions.HTTPError:
+        return {"error": "City not found or invalid API request"}
+
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Network error: {str(e)}"}
+
+    except (KeyError, IndexError):
+        return {"error": "Unexpected response format"}
