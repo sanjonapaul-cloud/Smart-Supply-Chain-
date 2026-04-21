@@ -7,8 +7,9 @@ from utils.logger import log_error, log_info
 
 load_dotenv()
 
-API_KEY = os.getenv("DISTANCE_API_KEY")
-URL = "https://api.openrouteservice.org/v2/directions/driving-car/geojson"
+API_KEY = (os.getenv("DISTANCE_API_KEY") or "").strip()
+URL_GEOJSON = "https://api.openrouteservice.org/v2/directions/driving-car/geojson"
+URL_JSON = "https://api.openrouteservice.org/v2/directions/driving-car"
 
 
 def _fallback_distance(error_message: str, status: str = "fallback"):
@@ -19,6 +20,41 @@ def _fallback_distance(error_message: str, status: str = "fallback"):
         "status": status,
         "error": error_message,
     }
+
+
+def _extract_route_points(geometry):
+    route_path = []
+
+    if isinstance(geometry, dict):
+        geometry = geometry.get("coordinates", [])
+
+    if isinstance(geometry, list):
+        for point in geometry:
+            if (
+                isinstance(point, list)
+                and len(point) >= 2
+                and isinstance(point[0], (int, float))
+                and isinstance(point[1], (int, float))
+            ):
+                route_path.append([float(point[0]), float(point[1])])
+
+    return route_path
+
+
+def _parse_distance_response(data):
+    if isinstance(data, dict) and isinstance(data.get("features"), list) and data["features"]:
+        feature = data["features"][0]
+        summary = feature["properties"]["summary"]
+        geometry = feature.get("geometry", {}).get("coordinates", [])
+        return summary, _extract_route_points(geometry)
+
+    if isinstance(data, dict) and isinstance(data.get("routes"), list) and data["routes"]:
+        route = data["routes"][0]
+        summary = route["summary"]
+        geometry = route.get("geometry", [])
+        return summary, _extract_route_points(geometry)
+
+    raise KeyError("No route data found")
 
 
 def get_distance(source_coords, destination_coords):
@@ -51,57 +87,79 @@ def get_distance(source_coords, destination_coords):
         ]
     }
 
-    try:
-        response = requests.post(URL, json=body, headers=headers, timeout=5)
-        response.raise_for_status()
+    attempts = [
+        {
+            "label": "geojson-post-auth-header",
+            "method": "POST",
+            "url": URL_GEOJSON,
+            "kwargs": {"json": body, "headers": headers, "timeout": 8},
+        },
+        {
+            "label": "json-post-auth-header",
+            "method": "POST",
+            "url": URL_JSON,
+            "kwargs": {"json": body, "headers": headers, "timeout": 8},
+        },
+        {
+            "label": "json-get-api-key-query",
+            "method": "GET",
+            "url": URL_JSON,
+            "kwargs": {
+                "params": {
+                    "api_key": API_KEY,
+                    "start": f"{source_coords[0]},{source_coords[1]}",
+                    "end": f"{destination_coords[0]},{destination_coords[1]}",
+                },
+                "timeout": 8,
+            },
+        },
+    ]
 
-        data = response.json()
+    errors = []
 
-        feature = data["features"][0]
-        summary = feature["properties"]["summary"]
-        geometry = feature["geometry"]["coordinates"]
+    for attempt in attempts:
+        try:
+            response = requests.request(
+                method=attempt["method"],
+                url=attempt["url"],
+                **attempt["kwargs"],
+            )
+            response.raise_for_status()
 
-        route_path = []
-        if isinstance(geometry, list):
-            for point in geometry:
-                if (
-                    isinstance(point, list)
-                    and len(point) >= 2
-                    and isinstance(point[0], (int, float))
-                    and isinstance(point[1], (int, float))
-                ):
-                    route_path.append([float(point[0]), float(point[1])])
+            data = response.json()
+            summary, route_path = _parse_distance_response(data)
 
-        distance_km = round(summary["distance"] / 1000, 2)
-        duration_min = round(summary["duration"] / 60, 2)
+            distance_km = round(float(summary["distance"]) / 1000, 2)
+            duration_min = round(float(summary["duration"]) / 60, 2)
 
-        result = {
-            "distance_km": distance_km,
-            "duration_min": duration_min,
-            "route_path": route_path,
-            "status": "success",
-            "error": None,
-        }
-        log_info(
-            "Distance service success: "
-            f"distance_km={result['distance_km']} duration_min={result['duration_min']}"
-        )
-        return result
+            result = {
+                "distance_km": distance_km,
+                "duration_min": duration_min,
+                "route_path": route_path,
+                "status": "success",
+                "error": None,
+            }
+            log_info(
+                "Distance service success: "
+                f"distance_km={result['distance_km']} duration_min={result['duration_min']} "
+                f"via={attempt['label']}"
+            )
+            return result
 
-    except requests.exceptions.RequestException as e:
-        message = f"Request failed: {str(e)}"
-        log_error(f"Distance service request error: {message}")
-        return _fallback_distance(message)
+        except requests.exceptions.RequestException as e:
+            errors.append(f"{attempt['label']}: {str(e)}")
+            continue
 
-    except (KeyError, IndexError) as e:
-        message = f"Invalid response format from API: {str(e)}"
-        log_error(f"Distance service parse error: {message}")
-        return _fallback_distance(message)
+        except (KeyError, IndexError, TypeError, ValueError) as e:
+            errors.append(f"{attempt['label']}: Invalid response format: {str(e)}")
+            continue
+        except Exception as e:
+            errors.append(f"{attempt['label']}: {str(e)}")
+            continue
 
-    except Exception as e:
-        message = str(e)
-        log_error(f"Distance service unexpected error: {message}")
-        return _fallback_distance(message, status="error")
+    message = "Request failed: " + " | ".join(errors)
+    log_error(f"Distance service request error: {message}")
+    return _fallback_distance(message)
 
 
 if __name__ == "__main__":
