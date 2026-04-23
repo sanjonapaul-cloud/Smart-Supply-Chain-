@@ -137,6 +137,8 @@ def predict():
 
         # Create a DataFrame with the normalized input data
         try:
+            print("RAW DATA:", data)
+            print("NORMALIZED DATA:", normalized_data)
             input_df = pd.DataFrame([normalized_data])
         except Exception as e:
             return jsonify({
