@@ -137,6 +137,7 @@ def predict():
 
         # Create a DataFrame with the normalized input data
         try:
+            print("FEATURE COLUMNS:", feature_columns)
             print("RAW DATA:", data)
             print("NORMALIZED DATA:", normalized_data)
             input_df = pd.DataFrame([normalized_data])
