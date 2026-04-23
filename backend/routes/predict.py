@@ -8,6 +8,7 @@ import numpy as np
 from utils.logger import log_info, log_error
 from utils.storage import save_prediction, get_history
 from services.route_analysis_service import get_route_analysis
+from services.gemini_service import generate_risk_explanation
 
 predict_bp = Blueprint("predict", __name__)
 
@@ -173,6 +174,24 @@ def predict():
         prediction_proba = model.predict_proba(X_scaled)[0]
 
         result = "High Risk 🚨" if prediction == 1 else "Safe ✅"
+        response_data = {
+            "risk_level": result,
+            "confidence": float(max(prediction_proba) * 100),
+            "risk_probability": {
+               "safe": float(prediction_proba[0] * 100),
+               "high_risk": float(prediction_proba[1] * 100)
+            },
+            "traffic": None,
+            "weather": None,
+            "distance": None
+        }
+
+# NEW AI LAYER (SAFE ADDITION)
+        try:
+            ai_insight = generate_risk_explanation(response_data)
+            response_data["ai_insight"] = ai_insight
+        except Exception as e:
+            response_data["ai_insight"] = "AI explanation not available"
 
         prediction_data = {
             "timestamp": str(datetime.datetime.now()),
@@ -187,15 +206,11 @@ def predict():
         # Log success
         log_info(f"✓ Prediction: {result} (Confidence: {max(prediction_proba)*100:.1f}%) | Input: Lead_time={data.get('lead_time')}, Shipping_times={data.get('shipping_times')}, Defect_rates={data.get('defect_rates')}")
 
+       
         return jsonify({
-            "status": "success",
-            "prediction": result,
-            "confidence": float(max(prediction_proba) * 100),
-            "risk_probability": {
-                "safe": float(prediction_proba[0] * 100),
-                "high_risk": float(prediction_proba[1] * 100)
-            }
-        }), 200
+    "status": "success",
+    **response_data
+}), 200
 
     except Exception as e:
         log_error(f"Prediction error: {str(e)}")
