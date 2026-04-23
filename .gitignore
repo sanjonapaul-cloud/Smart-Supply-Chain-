@@ -1,7 +1,7 @@
 node modules
-.env
-venv/
-__pycache__/
+backend/.env
+.venv/
+_pycache_/
 *.pyc
 backend/data/history.json
 backend/app.log
